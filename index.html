@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constructeur de Bracelet Personnalisé</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; }
+        
+        .charm-swing {
+            animation: swingEnter 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: top center;
+        }
+
+        @keyframes swingEnter {
+            0% { transform: translate(-50%, 0) rotate(-45deg) scale(0); opacity: 0; }
+            100% { transform: translate(-50%, 0) rotate(var(--target-rotate)) scale(1); opacity: 1; }
+        }
+
+        .btn-shine { position: relative; overflow: hidden; }
+        .btn-shine::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(to bottom right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.1) 60%, rgba(255,255,255,0) 100%);
+            transform: rotate(30deg); animation: shine 3s infinite;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(30deg); }
+            100% { transform: translateX(100%) rotate(30deg); }
+        }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-[#FDFBF7] text-gray-800">
+
+    <nav class="w-full py-6 px-8 flex justify-center border-b border-[#E5E0D8] bg-white">
+        <div class="text-2xl font-bold tracking-widest text-[#B8860B]">LYVORA</div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 lg:py-12 pb-20">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+            
+            <!-- SECTION VISUELLE -->
+            <div class="lg:col-span-7 sticky top-8">
+                <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8 relative border border-[#E5E0D8]">
+                    
+                    <div class="relative w-full aspect-square md:aspect-[4/3] flex items-center justify-center bg-[#F9F9F9] rounded-xl overflow-hidden">
+                        
+                        <!-- IMAGE BRACELET (Position fixée à -24% Y) -->
+                        <img id="base-bracelet" src="https://cdn.shopify.com/s/files/1/0970/5662/0892/files/bracelet.png?v=1768763485" 
+                             alt="Bracelet" 
+                             class="w-[85%] h-[85%] object-contain select-none pointer-events-none z-0"
+                             style="transform: translateY(-24%);"> 
+
+                        <!-- CONTENEUR DES CHARMS -->
+                        <div id="charm-container" class="absolute inset-0 z-10 w-full h-full pointer-events-none">
+                            <!-- JS injecte les charms ici -->
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 flex justify-between items-center text-xs text-gray-400 px-2">
+                        <span>Cliquez sur un charm pour le retirer</span>
+                        <button onclick="resetBracelet()" class="text-red-400 hover:text-red-600 underline pointer-events-auto cursor-pointer">Tout effacer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION CONFIGURATEUR -->
+            <div class="lg:col-span-5 flex flex-col gap-8">
+                <div>
+                    <h1 class="text-3xl font-light mb-2">Bracelet "Souvenirs"</h1>
+                    <div class="flex items-center gap-4 mb-4">
+                        <span id="total-price" class="text-2xl font-semibold text-[#B8860B]">59.00 €</span>
+                    </div>
+                </div>
+
+                <hr class="border-[#E5E0D8]">
+
+                <!-- Étape 1 : Packs -->
+                <div>
+                    <h3 class="text-sm font-bold uppercase tracking-wider mb-3">1. Choisissez votre Pack</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setPack(3)" id="btn-pack-3" class="p-4 border-2 rounded-lg text-center transition-all">
+                            <span class="block text-lg font-bold">3 Charms</span>
+                            <span class="text-sm">59.00 €</span>
+                        </button>
+                        <button onclick="setPack(5)" id="btn-pack-5" class="p-4 border-2 rounded-lg text-center transition-all">
+                            <span class="block text-lg font-bold">5 Charms</span>
+                            <span class="text-sm">79.00 €</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Étape 2 : Sélection Charms -->
+                <div>
+                    <div class="flex justify-between items-end mb-3">
+                        <h3 class="text-sm font-bold uppercase tracking-wider">2. Sélectionnez vos Charms</h3>
+                        <span id="slots-counter" class="text-xs font-medium text-[#B8860B]">0 / 3</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-3 max-h-64 overflow-y-auto scrollbar-hide" id="charms-grid">
+                        <!-- JS items -->
+                    </div>
+                    <p id="error-msg" class="text-red-500 text-xs mt-2 hidden animate-pulse font-medium">Nombre maximum de charms atteint.</p>
+                </div>
+
+                <!-- Footer -->
+                <button class="w-full btn-shine bg-[#1a1a1a] text-white py-4 rounded-lg font-medium text-lg shadow-lg hover:bg-[#333] transition-colors">
+                    Ajouter au panier
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const charmsData = [
+            { id: 1, name: "Cœur", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/coeur.png?v=1768763485" },
+            { id: 2, name: "Étoile", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/etoile.png?v=1768763485" },
+            { id: 3, name: "Chance", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/goodluck.png?v=1768763485" },
+            { id: 4, name: "Poisson", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/poisson.png?v=1768763485" },
+            { id: 5, name: "Cœur Or", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/coeur.png?v=1768763485" },
+            { id: 6, name: "Étoile Or", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/etoile.png?v=1768763485" },
+            { id: 7, name: "Trèfle", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/goodluck.png?v=1768763485" },
+            { id: 8, name: "Poisson Or", src: "https://cdn.shopify.com/s/files/1/0970/5662/0892/files/poisson.png?v=1768763485" }
+        ];
+
+        // Paramètres figés validés par l'utilisateur
+        const settings = { 
+            baseTop: 71, 
+            arcIntensity: 3, 
+            spread: 45, 
+            size: 8 
+        };
+
+        let currentPack = 3; 
+        let selectedCharms = []; 
+
+        function init() {
+            renderGrid();
+            updateUI();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('charms-grid');
+            grid.innerHTML = charmsData.map(c => `
+                <button onclick="addCharmById(${c.id})" class="aspect-square bg-gray-50 border rounded-lg p-2 hover:border-[#B8860B] transition-all focus:outline-none">
+                    <img src="${c.src}" alt="${c.name}" class="w-full h-full object-contain pointer-events-none">
+                </button>
+            `).join('');
+        }
+
+        window.addCharmById = (id) => {
+            const charm = charmsData.find(c => c.id === id);
+            if (selectedCharms.length >= currentPack) {
+                const err = document.getElementById('error-msg');
+                err.classList.remove('hidden');
+                setTimeout(() => err.classList.add('hidden'), 2000);
+                return;
+            }
+            selectedCharms.push({ ...charm, uid: Math.random() });
+            renderBracelet();
+            updateUI();
+        };
+
+        window.removeCharm = (index) => {
+            selectedCharms.splice(index, 1);
+            renderBracelet();
+            updateUI();
+        };
+
+        window.resetBracelet = () => {
+            selectedCharms = [];
+            renderBracelet();
+            updateUI();
+        };
+
+        window.setPack = (s) => {
+            currentPack = s;
+            if (selectedCharms.length > s) selectedCharms = selectedCharms.slice(0, s);
+            updateUI();
+            renderBracelet();
+        };
+
+        function renderBracelet() {
+            const container = document.getElementById('charm-container');
+            container.innerHTML = '';
+            const count = selectedCharms.length;
+
+            selectedCharms.forEach((charm, i) => {
+                const factor = count === 1 ? 0 : (i - (count - 1) / 2);
+                const x = 50 + (factor * (settings.spread / 4));
+                const y = settings.baseTop - (Math.pow(Math.abs(factor), 2) * settings.arcIntensity);
+                const rot = factor * 12;
+
+                const el = document.createElement('div');
+                el.className = "absolute charm-swing pointer-events-auto cursor-pointer group";
+                el.style.left = `${x}%`;
+                el.style.top = `${y}%`;
+                el.style.width = `${settings.size}%`;
+                el.style.setProperty('--target-rotate', `${rot}deg`);
+                
+                el.onclick = (e) => { 
+                    e.stopPropagation(); 
+                    removeCharm(i); 
+                };
+
+                el.innerHTML = `
+                    <img src="${charm.src}" class="w-full drop-shadow-md transition-transform group-hover:scale-110">
+                    <div class="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity font-bold">×</div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('slots-counter').innerText = `${selectedCharms.length} / ${currentPack}`;
+            document.getElementById('total-price').innerText = (currentPack === 3 ? "59.00 €" : "79.00 €");
+            
+            const b3 = document.getElementById('btn-pack-3');
+            const b5 = document.getElementById('btn-pack-5');
+            
+            b3.className = `p-4 border-2 rounded-lg text-center transition-all ${currentPack === 3 ? 'border-[#B8860B] bg-[#FFFBF0] font-bold shadow-sm' : 'border-gray-100 bg-white hover:border-gray-300'}`;
+            b5.className = `p-4 border-2 rounded-lg text-center transition-all ${currentPack === 5 ? 'border-[#B8860B] bg-[#FFFBF0] font-bold shadow-sm' : 'border-gray-100 bg-white hover:border-gray-300'}`;
+        }
+
+        init();
+    </script>
+</body>
+</html>
